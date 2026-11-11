@@ -26,7 +26,6 @@
       overflow-x: hidden;
     }
 
-    /* Card de Vidro Escuro (OLED Glassmorphism) */
     .glass-card {
       background: linear-gradient(145deg, rgba(10, 25, 54, 0.65) 0%, rgba(4, 11, 26, 0.85) 100%);
       backdrop-filter: blur(20px);
@@ -35,7 +34,6 @@
       box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
     }
 
-    /* Card Principal com Ondas em Azul Profundo (Estilo Portara sem roxo) */
     .hero-wave-card {
       background:
         radial-gradient(circle at 85% 20%, rgba(56, 189, 248, 0.35) 0%, transparent 50%),
@@ -47,7 +45,6 @@
       overflow: hidden;
     }
 
-    /* Botões Circulares Iluminados */
     .orb-btn {
       background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.25), rgba(8, 20, 44, 0.9) 75%);
       border: 1px solid rgba(56, 189, 248, 0.22);
@@ -60,7 +57,6 @@
       transform: translateY(-2px);
     }
 
-    /* Anel Orbital de Transferência Sem Limites */
     .orbital-ring {
       position: relative;
       border-radius: 9999px;
@@ -87,13 +83,11 @@
       to { transform: rotate(360deg); }
     }
 
-    /* Radar de Proximidade */
     .radar-sweep {
       background: conic-gradient(from 0deg, rgba(56, 189, 248, 0.35) 0deg, transparent 90deg);
       animation: spinSlow 3.5s linear infinite;
     }
 
-    /* Barra de rolagem fina */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #02050E; }
     ::-webkit-scrollbar-thumb { background: #0F2952; border-radius: 9999px; }
@@ -101,11 +95,17 @@
 </head>
 <body class="min-h-screen flex flex-col selection:bg-sky-500 selection:text-slate-950">
 
-  <!-- Luzes de fundo em Azul Profundo -->
+  <!-- Luzes de fundo -->
   <div class="fixed inset-0 pointer-events-none overflow-hidden -z-10">
     <div class="absolute -top-40 left-1/4 w-96 h-96 bg-blue-700/20 rounded-full blur-[130px]"></div>
     <div class="absolute top-1/2 -right-20 w-96 h-96 bg-sky-500/15 rounded-full blur-[140px]"></div>
     <div class="absolute -bottom-32 left-10 w-80 h-80 bg-blue-900/30 rounded-full blur-[120px]"></div>
+  </div>
+
+  <!-- Notificação Flutuante (Toast) -->
+  <div id="toastBanner" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-2xl bg-blue-950/95 border border-sky-400/50 text-xs font-semibold text-sky-200 shadow-2xl flex items-center gap-2">
+    <span class="w-2 h-2 rounded-full bg-sky-400 animate-ping"></span>
+    <span id="toastText">Sincronizado!</span>
   </div>
 
   <!-- ================= TELA DE LOGIN / CADASTRO ================= -->
@@ -136,6 +136,8 @@
         </button>
       </div>
 
+      <div id="authErrorBox" class="hidden mb-4 p-3 rounded-xl bg-red-950/60 border border-red-500/40 text-xs text-red-200"></div>
+
       <div class="space-y-3.5">
         <div>
           <label class="text-xs text-slate-300 font-medium block mb-1">Nome deste Aparelho</label>
@@ -153,30 +155,21 @@
             class="w-full px-3.5 py-2.5 rounded-xl bg-[#040B1A] border border-blue-900/60 focus:border-sky-400 focus:outline-none text-sm text-white" />
         </div>
 
-        <!-- Gaveta para Chaves do Supabase (Passo 1) -->
         <details class="group rounded-xl bg-[#040B1A]/90 border border-blue-900/40 p-3">
           <summary class="text-xs font-medium text-sky-400 cursor-pointer flex items-center justify-between">
-            <span>Configurar Nuvem Supabase (Passo 1)</span>
+            <span>Chaves do Supabase (Já Configuradas)</span>
             <i data-lucide="chevron-down" class="w-4 h-4 group-open:rotate-180 transition"></i>
           </summary>
           <div class="mt-3 space-y-2.5">
-            <input id="sbUrlInput" type="text" placeholder="Project URL (https://xyz.supabase.co)"
+            <input id="sbUrlInput" type="text"
               class="w-full px-3 py-2 rounded-lg bg-[#02050E] border border-blue-900/50 text-xs text-slate-200" />
-            <input id="sbKeyInput" type="password" placeholder="Anon Public Key (eyJhbGci...)"
+            <input id="sbKeyInput" type="password"
               class="w-full px-3 py-2 rounded-lg bg-[#02050E] border border-blue-900/50 text-xs text-slate-200" />
-            <p class="text-[11px] text-slate-400 leading-relaxed">
-              As chaves ficam salvas no seu aparelho. Se deixar em branco, você pode usar o Modo Instantâneo abaixo para testar entre abas.
-            </p>
           </div>
         </details>
 
-        <button onclick="handleAuthSubmit()" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-semibold text-sm shadow-lg shadow-sky-500/20 transition">
+        <button id="authSubmitBtn" onclick="handleAuthSubmit()" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-semibold text-sm shadow-lg shadow-sky-500/20 transition">
           Conectar Aparelho na Conta
-        </button>
-
-        <button onclick="startInstantDemo()" class="w-full py-2.5 rounded-xl bg-blue-950/60 hover:bg-blue-900/60 border border-sky-400/30 text-sky-300 font-medium text-xs transition flex items-center justify-center gap-2">
-          <i data-lucide="zap" class="w-4 h-4"></i>
-          Modo Demonstração Instantâneo (Testar entre 2 Abas)
         </button>
       </div>
     </div>
@@ -204,7 +197,7 @@
   </div>
 
   <!-- ================= BARRA DE TOPO ================= -->
-  <header class="w-full max-w-7xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between">
+  <header id="appHeader" class="w-full max-w-7xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between">
     <div class="flex items-center gap-2.5">
       <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-blue-700 flex items-center justify-center shadow-md shadow-sky-500/20">
         <i data-lucide="disc-2" class="w-5 h-5 text-white"></i>
@@ -212,23 +205,13 @@
       <span class="font-extrabold tracking-wider text-sm sm:text-base text-white">OMNISYNC</span>
     </div>
 
-    <!-- Alternador Mobile / Desktop + Status -->
     <div class="flex items-center gap-2">
-      <div class="hidden sm:flex items-center bg-[#061229] border border-blue-900/60 rounded-full p-1 text-xs">
-        <button id="viewAutoBtn" onclick="setViewportMode('auto')" class="px-3 py-1 rounded-full bg-blue-600 text-white font-medium transition">
-          Auto
-        </button>
-        <button id="viewMobileBtn" onclick="setViewportMode('mobile')" class="px-3 py-1 rounded-full text-slate-400 hover:text-white transition">
-          Mobile
-        </button>
-      </div>
-
       <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#061229] border border-sky-400/25">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="onlineDot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
         <span id="activeDeviceLabel" class="text-xs font-medium text-slate-200">Online</span>
       </div>
 
-      <button onclick="logoutSession()" title="Trocar Conta / Sair" class="p-2 rounded-full bg-[#061229] border border-blue-900/60 text-slate-300 hover:text-white">
+      <button onclick="logoutSession()" title="Sair da Conta" class="p-2 rounded-full bg-[#061229] border border-blue-900/60 text-slate-300 hover:text-white">
         <i data-lucide="log-out" class="w-4 h-4"></i>
       </button>
     </div>
@@ -237,22 +220,22 @@
   <!-- ================= CONTAINER PRINCIPAL ================= -->
   <main id="mainViewport" class="w-full max-w-7xl mx-auto p-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start transition-all duration-300">
 
-    <!-- COLUNA ESQUERDA (Layout Idêntico ao Smartphone da Imagem, mas em Azul Escuro) -->
+    <!-- COLUNA ESQUERDA -->
     <section id="leftColumn" class="lg:col-span-5 space-y-5">
 
-      <!-- Card Principal em Ondas Azul Escuro (Contadores Gigantes) -->
+      <!-- Card Principal em Ondas Azul Escuro -->
       <div class="hero-wave-card rounded-3xl p-6">
         <div class="flex items-center justify-between mb-3">
           <span id="connectionModeTag" class="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-400/15 border border-sky-400/30 text-sky-300">
-            Rede P2P Ativa
+            Conectando...
           </span>
-          <span id="userAccountTag" class="text-xs text-sky-200/80 truncate max-w-[160px]">conta@omnisync</span>
+          <span id="userAccountTag" class="text-xs text-sky-200/80 truncate max-w-[180px]">conta@omnisync</span>
         </div>
 
         <div class="grid grid-cols-2 gap-4 pt-1">
           <div>
             <p class="text-xs text-sky-200/75 font-medium mb-1">Área de Transferência</p>
-            <div id="statClipboardCount" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">1</div>
+            <div id="statClipboardCount" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">0</div>
           </div>
           <div>
             <p class="text-xs text-sky-200/75 font-medium mb-1">Arquivos Enviados</p>
@@ -261,7 +244,7 @@
         </div>
       </div>
 
-      <!-- 4 Botões Circulares Iluminados (Enviar, Sincronizar, Próximos, 4G/5G) -->
+      <!-- 4 Botões Circulares Iluminados -->
       <div class="grid grid-cols-4 gap-3 text-center">
         <button onclick="document.getElementById('fileInput').click()" class="flex flex-col items-center gap-2 group">
           <div class="orb-btn w-14 h-14 rounded-full flex items-center justify-center">
@@ -270,9 +253,9 @@
           <span class="text-xs font-medium text-slate-300">Enviar</span>
         </button>
 
-        <button onclick="broadcastClipboardNow()" class="flex flex-col items-center gap-2 group">
+        <button onclick="syncNowButton()" class="flex flex-col items-center gap-2 group">
           <div class="orb-btn w-14 h-14 rounded-full flex items-center justify-center">
-            <i data-lucide="refresh-cw" class="w-5 h-5 text-sky-300 group-hover:rotate-180 transition duration-500"></i>
+            <i id="syncIcon" data-lucide="refresh-cw" class="w-5 h-5 text-sky-300 transition duration-500"></i>
           </div>
           <span class="text-xs font-medium text-slate-300">Sincronizar</span>
         </button>
@@ -295,12 +278,10 @@
       <!-- Lista de Aparelhos Conectados -->
       <div class="glass-card rounded-3xl p-5">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-bold text-white">Aparelhos Conectados</h2>
-          <span class="text-[11px] text-sky-400">Clique para selecionar o destino</span>
+          <h2 class="text-sm font-bold text-white">Aparelhos Conectados na Conta</h2>
+          <span class="text-[11px] text-sky-400">Toque para focar em 1</span>
         </div>
-        <div id="devicesListContainer" class="space-y-2.5">
-          <!-- Preenchido via JS -->
-        </div>
+        <div id="devicesListContainer" class="space-y-2.5"></div>
       </div>
 
       <!-- Área de Transferência Universal -->
@@ -308,7 +289,7 @@
         <div class="flex items-center justify-between mb-3">
           <div>
             <h2 class="text-sm font-bold text-white">Área de Transferência Universal</h2>
-            <p class="text-[11px] text-slate-400">Sincroniza texto instantaneamente entre seus aparelhos</p>
+            <p class="text-[11px] text-slate-400">Sincroniza entre seus aparelhos e próximos permitidos</p>
           </div>
           <button onclick="pasteFromSystemClipboard()" class="px-3 py-1.5 rounded-xl bg-[#071633] hover:bg-blue-900/60 border border-sky-400/30 text-xs font-medium text-sky-300 transition">
             Colar do Sistema
@@ -316,36 +297,40 @@
         </div>
 
         <textarea id="universalClipboardInput" rows="3"
-          placeholder="Digite ou cole qualquer texto ou link aqui para disponibilizar imediatamente nos outros aparelhos..."
+          placeholder="Digite ou cole qualquer texto aqui. Ele aparece automaticamente no seu PC e Celular..."
           class="w-full p-3.5 rounded-2xl bg-[#030917] border border-blue-900/60 focus:border-sky-400 focus:outline-none text-sm text-sky-300 placeholder-slate-600 resize-none mb-3"></textarea>
 
         <div class="flex items-center justify-between gap-2">
           <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
-            <input id="clipShareNearbyCheck" type="checkbox" onchange="broadcastClipboardNow()" class="rounded bg-slate-900 border-blue-800 text-sky-500 focus:ring-0" />
-            <span>Visível para aparelhos próximos autorizados</span>
+            <input id="clipShareNearbyCheck" type="checkbox" onchange="broadcastClipboardNow(true)" class="rounded bg-slate-900 border-blue-800 text-sky-500 focus:ring-0" />
+            <span>Visível para aparelhos próximos</span>
           </label>
 
-          <button onclick="copyUniversalClipboard()" class="px-3.5 py-2 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-xs font-semibold text-white flex items-center gap-1.5 transition">
-            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
-            Copiar
-          </button>
+          <div class="flex items-center gap-2">
+            <button onclick="broadcastClipboardNow(true)" class="px-3 py-2 rounded-xl bg-sky-500/20 hover:bg-sky-500/30 border border-sky-400/40 text-xs font-semibold text-sky-300 transition">
+              Enviar Texto
+            </button>
+            <button onclick="copyUniversalClipboard()" class="px-3.5 py-2 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-xs font-semibold text-white flex items-center gap-1.5 transition">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              Copiar
+            </button>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- COLUNA DIREITA (Anel Orbital de Transferência Sem Limites + Radar + Histórico) -->
+    <!-- COLUNA DIREITA -->
     <section id="rightColumn" class="lg:col-span-7 space-y-5">
 
       <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
-        <!-- Card do Anel Orbital para Envio de Tamanho Ilimitado -->
+        <!-- Anel Orbital de Transferência Sem Limites -->
         <div id="dropZone"
           class="glass-card md:col-span-7 rounded-3xl p-6 flex flex-col items-center justify-center text-center min-h-[310px] cursor-pointer relative overflow-hidden"
           onclick="document.getElementById('fileInput').click()">
           <input id="fileInput" type="file" multiple class="hidden" onchange="handleFilesSelected(this.files)" />
 
-          <p class="text-xs font-medium text-slate-300 mb-5">Arrastar e Soltar Arquivos Aqui (Sem Limite de GB)</p>
+          <p class="text-xs font-medium text-slate-300 mb-5">Toque ou Arraste Arquivos Aqui (Sem Limite de GB)</p>
 
-          <!-- Círculo Iluminado Azul Profundo / Ciano -->
           <div class="orbital-ring w-48 h-48 flex flex-col items-center justify-center p-4 select-none">
             <i data-lucide="upload-cloud" class="w-7 h-7 text-sky-400 mb-1.5"></i>
             <span id="ringMainText" class="text-sm font-bold text-white leading-snug">
@@ -357,11 +342,11 @@
           </div>
 
           <p id="transferStatusFooter" class="text-xs text-slate-400 mt-5">
-            Funciona via Wi-Fi Local ou Dados Móveis (4G/5G)
+            Envia direto para todos os aparelhos ativos da sua conta
           </p>
         </div>
 
-        <!-- Card do Radar de Pessoas Próximas -->
+        <!-- Radar de Pessoas Próximas -->
         <div class="glass-card md:col-span-5 rounded-3xl p-5 flex flex-col justify-between">
           <div>
             <div class="flex items-center justify-between mb-1">
@@ -371,15 +356,14 @@
               </span>
             </div>
             <p class="text-xs text-slate-400 mb-4">
-              Permite que pessoas perto de você peçam para enviar arquivos ou ler seu texto público.
+              Conecta com aparelhos de outras contas perto de você quando "Próximos" está ativo.
             </p>
           </div>
 
-          <!-- Radar Animado em Azul -->
           <div class="relative w-36 h-36 mx-auto my-2 rounded-full border border-sky-400/30 bg-[#030A1C] flex items-center justify-center overflow-hidden">
             <div class="absolute inset-3 rounded-full border border-sky-400/20"></div>
             <div class="absolute inset-8 rounded-full border border-sky-400/15"></div>
-            <div id="radarSweepVisual" class="radar-sweep absolute inset-0 rounded-full opacity-30"></div>
+            <div class="radar-sweep absolute inset-0 rounded-full opacity-30"></div>
             <div class="w-3 h-3 rounded-full bg-sky-400 shadow-[0_0_12px_#38bdf8] z-10"></div>
           </div>
 
@@ -391,72 +375,95 @@
         </div>
       </div>
 
-      <!-- Histórico de Atividades Recentes e Área Coletiva -->
+      <!-- Histórico de Atividades Recentes -->
       <div class="glass-card rounded-3xl p-5">
         <div class="flex items-center justify-between mb-3">
           <div>
-            <h3 class="text-sm font-bold text-white">Atividades Recentes & Área de Transferência</h3>
-            <p class="text-[11px] text-slate-400">Arquivos transferidos em P2P e textos sincronizados na sessão</p>
+            <h3 class="text-sm font-bold text-white">Atividades Recentes</h3>
+            <p class="text-[11px] text-slate-400">Fluxo em tempo real de arquivos P2P e textos sincronizados</p>
           </div>
           <button onclick="clearActivities()" class="text-xs text-slate-400 hover:text-sky-300 transition">
             Limpar lista
           </button>
         </div>
 
-        <div id="activityFeed" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-          <!-- Preenchido via JS -->
-        </div>
+        <div id="activityFeed" class="space-y-2.5 max-h-64 overflow-y-auto pr-1"></div>
       </div>
     </section>
 
   </main>
 
-  <!-- ================= LÓGICA COMPLETA JAVASCRIPT ================= -->
   <script>
     // ============================================================================
-    // 1. CONFIGURAÇÃO DO SERVIDOR TURN (PASSO 2 - CONEXÃO 4G/5G E WI-FI)
+    // 1. CHAVES DO SUPABASE EMBUTIDAS DE FÁBRICA + CONFIGURAÇÃO WEBRTC
     // ============================================================================
+    const DEFAULT_SB_URL = 'https://dzsqzwfrkolhazimvhmv.supabase.co';
+    const DEFAULT_SB_KEY = 'sb_publishable_lAbedRExEOT25mtfFsuf1g_n31mZV9Y';
+
     const rtcConfig = {
       iceServers: [
         { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        // Quando pegar seu usuário e senha grátis no site metered.ca/stun-turn,
-        // basta descomentar as linhas abaixo e colar:
-        /*
-        {
-          urls: 'turn:standard.relay.metered.ca:80',
-          username: 'bbfb260823f320b595651aad',
-          credential: 'lDW+2gcbwuQDpMUz'
-        },
-        {
-          urls: 'turn:standard.relay.metered.ca:443?transport=tcp',
-          username: 'bbfb260823f320b595651aad',
-          credential: 'lDW+2gcbwuQDpMUz'
-        }
-        */
+        { urls: 'stun:stun1.l.google.com:19302' }
       ]
     };
 
     // ============================================================================
-    // 2. ESTADO DO APLICATIVO E DETECÇÃO AUTOMÁTICA DO APARELHO
+    // 2. DETECÇÃO AUTOMÁTICA DO APARELHO E LAYOUT (MOBILE vs DESKTOP)
     // ============================================================================
-    const deviceId = localStorage.getItem('omnisync_device_id') || ('dev_' + Math.random().toString(36).substring(2, 9));
+    const deviceId = localStorage.getItem('omnisync_device_id') || ('dev_' + Math.random().toString(36).substring(2, 10));
     localStorage.setItem('omnisync_device_id', deviceId);
 
+    function detectOS() {
+      const ua = navigator.userAgent;
+      if (/Android/i.test(ua)) return { os: 'Android', isMobile: true, defaultName: 'Celular Android' };
+      if (/iPhone|iPad|iPod/i.test(ua)) return { os: 'iOS', isMobile: true, defaultName: 'iPhone (iOS)' };
+      if (/Linux/i.test(ua)) return { os: 'Linux', isMobile: false, defaultName: 'PC (Linux)' };
+      return { os: 'Windows', isMobile: false, defaultName: 'Meu PC (Windows)' };
+    }
+
+    const myOS = detectOS();
+    document.getElementById('detectedOsBadge').textContent = `Sistema: ${myOS.os}`;
+
+    function applyAutomaticDeviceLayout() {
+      const isSmallScreen = window.innerWidth < 1024 || myOS.isMobile;
+      const main = document.getElementById('mainViewport');
+      const header = document.getElementById('appHeader');
+      const leftCol = document.getElementById('leftColumn');
+      const rightCol = document.getElementById('rightColumn');
+
+      if (isSmallScreen) {
+        header.className = 'w-full max-w-[440px] mx-auto px-4 pt-4 pb-2 flex items-center justify-between';
+        main.className = 'w-full max-w-[440px] mx-auto p-4 flex-1 flex flex-col gap-5';
+        leftCol.className = 'w-full space-y-5';
+        rightCol.className = 'w-full space-y-5';
+      } else {
+        header.className = 'w-full max-w-7xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between';
+        main.className = 'w-full max-w-7xl mx-auto p-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start';
+        leftCol.className = 'lg:col-span-5 space-y-5';
+        rightCol.className = 'lg:col-span-7 space-y-5';
+      }
+    }
+    window.addEventListener('resize', applyAutomaticDeviceLayout);
+    applyAutomaticDeviceLayout();
+
+    // ============================================================================
+    // 3. VARIÁVEIS DE ESTADO E INICIALIZAÇÃO DO SUPABASE
+    // ============================================================================
     let authMode = 'login';
-    let currentUserEmail = 'voce@omnisync.app';
+    let currentUserEmail = '';
+    let currentUserId = null;
     let allowCellular = true;
-    let allowNearby = false;
+    let allowNearby = localStorage.getItem('omnisync_allow_nearby') === 'true';
     let selectedTargetDeviceId = 'all';
-    let clipboardCounter = 1;
+    let clipboardCounter = 0;
     let totalBytesTransferred = 0;
 
-    // Instâncias de Comunicação
     let supabaseClient = null;
     let realtimeChannel = null;
+    let heartbeatTimer = null;
+    let clipDebounceTimer = null;
     const localBus = new BroadcastChannel('omnisync_p2p_bus');
 
-    // WebRTC P2P e Escrita Direta no Disco (Passo 3)
     const peerConnections = {};
     const dataChannels = {};
     let incomingMeta = null;
@@ -466,28 +473,47 @@
     let transferStartTime = 0;
     let pendingNearbyRequestPeer = null;
 
-    // Lista de Aparelhos Conhecidos
     const knownDevices = new Map();
 
-    function detectOS() {
-      const ua = navigator.userAgent;
-      if (/Android/i.test(ua)) return { os: 'Android', icon: 'smartphone', defaultName: 'Galaxy S24 (Android)' };
-      if (/iPhone|iPad|iPod/i.test(ua)) return { os: 'iOS', icon: 'smartphone', defaultName: 'iPhone (iOS)' };
-      if (/Linux/i.test(ua)) return { os: 'Linux', icon: 'terminal', defaultName: 'PC (Linux)' };
-      return { os: 'Windows', icon: 'monitor', defaultName: 'Meu PC (Windows)' };
+    // Preenche campos iniciais
+    document.getElementById('deviceNameInput').value = localStorage.getItem('omnisync_device_name') || myOS.defaultName;
+    document.getElementById('emailInput').value = localStorage.getItem('omnisync_saved_email') || '';
+    document.getElementById('sbUrlInput').value = localStorage.getItem('omnisync_sb_url') || DEFAULT_SB_URL;
+    document.getElementById('sbKeyInput').value = localStorage.getItem('omnisync_sb_key') || DEFAULT_SB_KEY;
+
+    function showToast(msg) {
+      const banner = document.getElementById('toastBanner');
+      document.getElementById('toastText').textContent = msg;
+      banner.classList.remove('hidden');
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => banner.classList.add('hidden'), 3000);
     }
 
-    const myOS = detectOS();
-    document.getElementById('detectedOsBadge').textContent = `Sistema: ${myOS.os}`;
-    document.getElementById('deviceNameInput').value = localStorage.getItem('omnisync_device_name') || myOS.defaultName;
-    document.getElementById('sbUrlInput').value = localStorage.getItem('omnisync_sb_url') || 'https://dzsqzwfrkolhazimvhmv.supabase.co';
-    document.getElementById('sbKeyInput').value = localStorage.getItem('omnisync_sb_key') || 'sb_publishable_lAbedRExEOT25mtfFsuf1g_n31mZV9Y';
+    function initSupabaseClient() {
+      const rawUrl = (document.getElementById('sbUrlInput').value || DEFAULT_SB_URL).trim();
+      const cleanUrl = rawUrl.replace(/\/rest\/v1\/?$/i, '').replace(/\/+$/, '');
+      const key = (document.getElementById('sbKeyInput').value || DEFAULT_SB_KEY).trim();
+
+      localStorage.setItem('omnisync_sb_url', cleanUrl);
+      localStorage.setItem('omnisync_sb_key', key);
+
+      if (window.supabase && cleanUrl && key) {
+        supabaseClient = window.supabase.createClient(cleanUrl, key, {
+          auth: {
+            persistSession: true,
+            autoRefreshToken: true,
+            storageKey: 'omnisync_supabase_auth'
+          }
+        });
+      }
+    }
 
     // ============================================================================
-    // 3. AUTENTICAÇÃO E INICIALIZAÇÃO (SUPABASE + CANAL LOCAL INSTANTÂNEO)
+    // 4. LOGIN PERSISTENTE (NÃO DESLOGA AO ATUALIZAR A PÁGINA)
     // ============================================================================
     function switchAuthMode(mode) {
       authMode = mode;
+      document.getElementById('authErrorBox').classList.add('hidden');
       const loginBtn = document.getElementById('tabLoginBtn');
       const regBtn = document.getElementById('tabRegisterBtn');
       if (mode === 'login') {
@@ -500,146 +526,346 @@
     }
 
     async function handleAuthSubmit() {
-      const devName = document.getElementById('deviceNameInput').value.trim() || myOS.defaultName;
-      const email = document.getElementById('emailInput').value.trim() || 'usuario@omnisync.app';
-      const password = document.getElementById('passwordInput').value.trim();
-      const sbUrl = document.getElementById('sbUrlInput').value.trim();
-      const sbKey = document.getElementById('sbKeyInput').value.trim();
+      const errBox = document.getElementById('authErrorBox');
+      errBox.classList.add('hidden');
 
-      localStorage.setItem('omnisync_device_name', devName);
-      if (sbUrl && sbKey) {
-        localStorage.setItem('omnisync_sb_url', sbUrl);
-        localStorage.setItem('omnisync_sb_key', sbKey);
+      const devName = document.getElementById('deviceNameInput').value.trim() || myOS.defaultName;
+      const email = document.getElementById('emailInput').value.trim().toLowerCase();
+      const password = document.getElementById('passwordInput').value.trim();
+
+      if (!email || !password) {
+        errBox.textContent = 'Preencha o seu e-mail e uma senha para conectar os aparelhos na mesma conta.';
+        errBox.classList.remove('hidden');
+        return;
       }
 
-      if (sbUrl && sbKey && window.supabase) {
+      const btn = document.getElementById('authSubmitBtn');
+      btn.textContent = 'Conectando na nuvem...';
+      btn.disabled = true;
+
+      initSupabaseClient();
+
+      let userId = null;
+      if (supabaseClient) {
         try {
-          supabaseClient = window.supabase.createClient(sbUrl, sbKey);
-          if (password) {
-            if (authMode === 'register') {
-              await supabaseClient.auth.signUp({ email, password });
+          if (authMode === 'register') {
+            const { data, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) {
+              // Se já existe, tenta fazer login direto
+              const loginRes = await supabaseClient.auth.signInWithPassword({ email, password });
+              if (loginRes.error) throw loginRes.error;
+              userId = loginRes.data?.user?.id;
             } else {
-              await supabaseClient.auth.signInWithPassword({ email, password });
+              userId = data?.user?.id;
             }
+          } else {
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            userId = data?.user?.id;
           }
-          setupSupabaseRealtime(devName, email);
-          document.getElementById('connectionModeTag').textContent = 'Supabase Cloud + P2P';
         } catch (err) {
-          console.warn('Usando sincronização local de fallback:', err);
+          console.warn('Aviso Auth Supabase (usando sala por email em tempo real):', err.message);
         }
       }
 
-      enterApp(devName, email);
-    }
-
-    function startInstantDemo() {
-      const devName = document.getElementById('deviceNameInput').value.trim() || myOS.defaultName;
+      // Salva sessão local para NUNCA deslogar no F5
       localStorage.setItem('omnisync_device_name', devName);
-      enterApp(devName, 'conta.demo@omnisync.app');
+      localStorage.setItem('omnisync_saved_email', email);
+      localStorage.setItem('omnisync_logged_in', 'true');
+      if (userId) localStorage.setItem('omnisync_user_id', userId);
+
+      btn.textContent = 'Conectar Aparelho na Conta';
+      btn.disabled = false;
+
+      enterApp(devName, email, userId);
     }
 
-    function enterApp(devName, email) {
-      currentUserEmail = email;
+    async function restorePreviousSession() {
+      initSupabaseClient();
+      const savedLogged = localStorage.getItem('omnisync_logged_in') === 'true';
+      const savedEmail = localStorage.getItem('omnisync_saved_email');
+      const savedDevName = localStorage.getItem('omnisync_device_name') || myOS.defaultName;
+
+      if (supabaseClient) {
+        const { data } = await supabaseClient.auth.getSession();
+        if (data?.session?.user) {
+          const email = data.session.user.email.toLowerCase();
+          localStorage.setItem('omnisync_saved_email', email);
+          localStorage.setItem('omnisync_logged_in', 'true');
+          localStorage.setItem('omnisync_user_id', data.session.user.id);
+          enterApp(savedDevName, email, data.session.user.id);
+          return;
+        }
+      }
+
+      if (savedLogged && savedEmail) {
+        enterApp(savedDevName, savedEmail, localStorage.getItem('omnisync_user_id'));
+      }
+    }
+
+    function enterApp(devName, email, userId) {
+      currentUserEmail = email.toLowerCase().trim();
+      currentUserId = userId || null;
+
       document.getElementById('authScreen').classList.add('hidden');
       document.getElementById('activeDeviceLabel').textContent = devName;
-      document.getElementById('userAccountTag').textContent = email;
+      document.getElementById('userAccountTag').textContent = currentUserEmail;
 
-      // Registra o próprio aparelho
+      if (allowNearby) {
+        document.getElementById('orbNearby').classList.add('active');
+        document.getElementById('orbNearbyLabel').textContent = 'Próximos: On';
+        document.getElementById('orbNearbyLabel').className = 'text-xs font-medium text-sky-300';
+        document.getElementById('nearbyStatusPill').textContent = 'Visível ao redor';
+        document.getElementById('nearbyStatusPill').className = 'text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300';
+      }
+
       knownDevices.set(deviceId, {
         id: deviceId,
         name: devName + ' (Este Aparelho)',
         os: myOS.os,
+        account: currentUserEmail,
         isSelf: true,
         isNearby: false,
-        authorized: true
+        authorized: true,
+        lastSeen: Date.now()
       });
 
       renderDevicesList();
-      announcePresence();
-      addActivityItem('Aparelho conectado à conta', devName, 'Online');
+      connectRealtimeAndDatabase(devName);
+      addActivityItem('Aparelho autenticado', `${devName} (${currentUserEmail})`, 'Ativo');
     }
 
-    function logoutSession() {
+    async function logoutSession() {
+      localStorage.removeItem('omnisync_logged_in');
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      if (realtimeChannel && supabaseClient) {
+        supabaseClient.removeChannel(realtimeChannel);
+        realtimeChannel = null;
+      }
+      if (supabaseClient) {
+        try { await supabaseClient.auth.signOut(); } catch (e) {}
+      }
+      knownDevices.clear();
       document.getElementById('authScreen').classList.remove('hidden');
     }
 
     // ============================================================================
-    // 4. SINALIZAÇÃO EM TEMPO REAL (SUPABASE + BROADCAST CHANNEL)
+    // 5. PRESENÇA + REALTIME + BANCO DE DADOS (PC E CELULAR SE ENXERGAM NA HORA)
     // ============================================================================
-    function setupSupabaseRealtime(devName, email) {
+    function connectRealtimeAndDatabase(devName) {
       if (!supabaseClient) return;
-      realtimeChannel = supabaseClient.channel('omnisync-global-room', {
-        config: { broadcast: { self: false } }
+
+      if (realtimeChannel) {
+        supabaseClient.removeChannel(realtimeChannel);
+      }
+
+      realtimeChannel = supabaseClient.channel('omnisync-global-v2', {
+        config: {
+          broadcast: { self: false },
+          presence: { key: deviceId }
+        }
       });
 
-      realtimeChannel
-        .on('broadcast', { event: 'signal' }, ({ payload }) => {
-          handleSignalingMessage(payload);
-        })
-        .subscribe((status) => {
-          if (status === 'SUBSCRIBED') announcePresence();
+      // 1. Escuta Presença Instantânea (lista todos os aparelhos online na hora)
+      realtimeChannel.on('presence', { event: 'sync' }, () => {
+        const state = realtimeChannel.presenceState();
+        Object.keys(state).forEach(key => {
+          if (key === deviceId) return;
+          const info = state[key][0];
+          if (!info) return;
+          registerRemotePeer(info.deviceId, info.deviceName, info.os, info.account, info.allowNearby);
         });
+      });
+
+      // 2. Escuta Mensagens Diretas (Clipboard, WebRTC e Pedidos de Proximidade)
+      realtimeChannel.on('broadcast', { event: 'signal' }, ({ payload }) => {
+        handleSignalingMessage(payload);
+      });
+
+      realtimeChannel.subscribe(async (status) => {
+        if (status === 'SUBSCRIBED') {
+          document.getElementById('connectionModeTag').textContent = 'Nuvem Supabase Online';
+          await trackAndAnnounce();
+          await syncFromDatabase();
+        }
+      });
+
+      if (heartbeatTimer) clearInterval(heartbeatTimer);
+      heartbeatTimer = setInterval(trackAndAnnounce, 4000);
+    }
+
+    async function trackAndAnnounce() {
+      const devName = localStorage.getItem('omnisync_device_name') || myOS.defaultName;
+      if (realtimeChannel) {
+        try {
+          await realtimeChannel.track({
+            deviceId: deviceId,
+            deviceName: devName,
+            os: myOS.os,
+            account: currentUserEmail,
+            allowNearby: allowNearby,
+            onlineAt: Date.now()
+          });
+        } catch (e) {}
+      }
+
+      sendSignal({
+        type: 'presence',
+        account: currentUserEmail,
+        allowNearby: allowNearby
+      });
+
+      // Se tiver tabela SQL criada no Supabase, atualiza lá também
+      if (supabaseClient && currentUserId) {
+        try {
+          await supabaseClient.from('devices').upsert({
+            id: deviceId,
+            user_id: currentUserId,
+            device_name: devName,
+            os_type: myOS.os,
+            is_online: true,
+            allow_nearby: allowNearby,
+            last_seen: new Date().toISOString()
+          });
+        } catch (e) {}
+      }
+    }
+
+    function registerRemotePeer(peerId, peerName, peerOs, peerAccount, peerAllowNearby) {
+      if (!peerId || peerId === deviceId) return;
+      const sameAccount = (peerAccount || '').toLowerCase() === currentUserEmail;
+      const existing = knownDevices.get(peerId);
+
+      knownDevices.set(peerId, {
+        id: peerId,
+        name: peerName || 'Aparelho Conectado',
+        os: peerOs || 'Dispositivo',
+        account: peerAccount,
+        isSelf: false,
+        isNearby: !sameAccount && peerAllowNearby,
+        authorized: sameAccount || (existing && existing.authorized),
+        lastSeen: Date.now()
+      });
+
+      renderDevicesList();
+      renderNearbyList();
+    }
+
+    // Botão Circular "Sincronizar"
+    async function syncNowButton() {
+      const icon = document.getElementById('syncIcon');
+      icon.classList.add('animate-spin');
+
+      // 1. Se tiver texto digitado aqui, dispara para os outros aparelhos
+      const currentText = document.getElementById('universalClipboardInput').value.trim();
+      if (currentText) {
+        await broadcastClipboardNow(false);
+      }
+
+      // 2. Pede aos outros aparelhos online que respondam com presença e último texto
+      sendSignal({
+        type: 'request-sync',
+        account: currentUserEmail
+      });
+
+      // 3. Busca do banco SQL caso tenha sido salvo antes
+      await syncFromDatabase();
+
+      setTimeout(() => icon.classList.remove('animate-spin'), 600);
+      showToast('Aparelhos e Área de Transferência sincronizados!');
+    }
+
+    async function syncFromDatabase() {
+      if (!supabaseClient || !currentUserId) return;
+      try {
+        const { data: devs } = await supabaseClient
+          .from('devices')
+          .select('*')
+          .eq('user_id', currentUserId);
+
+        if (devs && devs.length) {
+          devs.forEach(d => {
+            if (d.id !== deviceId) {
+              registerRemotePeer(d.id, d.device_name, d.os_type, currentUserEmail, d.allow_nearby);
+            }
+          });
+        }
+
+        const { data: clips } = await supabaseClient
+          .from('clipboard_sync')
+          .select('*')
+          .eq('user_id', currentUserId)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+
+        if (clips && clips.length > 0) {
+          const input = document.getElementById('universalClipboardInput');
+          if (!input.value && clips[0].content) {
+            input.value = clips[0].content;
+          }
+        }
+      } catch (e) {}
     }
 
     localBus.onmessage = (ev) => handleSignalingMessage(ev.data);
 
     function sendSignal(payload) {
-      const fullPayload = { ...payload, senderId: deviceId, senderName: localStorage.getItem('omnisync_device_name') || myOS.defaultName, senderOs: myOS.os };
+      const fullPayload = {
+        ...payload,
+        senderId: deviceId,
+        senderName: localStorage.getItem('omnisync_device_name') || myOS.defaultName,
+        senderOs: myOS.os,
+        account: currentUserEmail
+      };
       localBus.postMessage(fullPayload);
       if (realtimeChannel) {
         realtimeChannel.send({ type: 'broadcast', event: 'signal', payload: fullPayload });
       }
     }
 
-    function announcePresence() {
-      sendSignal({
-        type: 'presence',
-        account: currentUserEmail,
-        allowNearby: allowNearby
-      });
-    }
-
-    setInterval(announcePresence, 5000);
-
     async function handleSignalingMessage(msg) {
       if (!msg || msg.senderId === deviceId) return;
 
-      const sameAccount = msg.account === currentUserEmail;
+      const sameAccount = (msg.account || '').toLowerCase() === currentUserEmail;
 
-      if (msg.type === 'presence') {
-        const existing = knownDevices.get(msg.senderId);
-        knownDevices.set(msg.senderId, {
-          id: msg.senderId,
-          name: msg.senderName,
-          os: msg.senderOs,
-          isSelf: false,
-          isNearby: !sameAccount && msg.allowNearby,
-          authorized: sameAccount || (existing && existing.authorized)
-        });
-        renderDevicesList();
-        renderNearbyList();
+      // Qualquer sinal já registra o aparelho na lista imediatamente
+      registerRemotePeer(msg.senderId, msg.senderName, msg.senderOs, msg.account, msg.allowNearby);
+
+      if (msg.type === 'presence') return;
+
+      if (msg.type === 'request-sync') {
+        await trackAndAnnounce();
+        const myText = document.getElementById('universalClipboardInput').value;
+        if (myText && sameAccount) {
+          sendSignal({
+            type: 'clipboard',
+            text: myText,
+            shareNearby: document.getElementById('clipShareNearbyCheck').checked
+          });
+        }
         return;
       }
 
       if (msg.type === 'clipboard') {
         const peer = knownDevices.get(msg.senderId);
         const canReceive = sameAccount || (allowNearby && msg.shareNearby && peer && peer.authorized);
-        if (canReceive) {
+        if (canReceive && typeof msg.text === 'string') {
           const input = document.getElementById('universalClipboardInput');
           if (input.value !== msg.text) {
             input.value = msg.text;
             clipboardCounter++;
             document.getElementById('statClipboardCount').textContent = clipboardCounter;
-            addActivityItem('Texto sincronizado na Área de Transferência', `De: ${msg.senderName}`, 'Sincronizado');
+            addActivityItem('Texto recebido na Área de Transferência', `De: ${msg.senderName}`, 'Sincronizado');
+            showToast(`Novo texto recebido de ${msg.senderName}`);
           }
         }
         return;
       }
 
       if (msg.type === 'nearby-request' && msg.targetId === deviceId) {
-        pendingNearbyRequestPeer = { id: msg.senderId, name: msg.senderName, os: msg.senderOs };
+        pendingNearbyRequestPeer = { id: msg.senderId, name: msg.senderName, os: msg.senderOs, account: msg.account };
         document.getElementById('permissionModalText').textContent =
-          `O aparelho "${msg.senderName}" (${msg.senderOs}) está próximo e pede permissão para trocar arquivos e ver a área de transferência pública.`;
+          `O aparelho "${msg.senderName}" (${msg.senderOs}) próximo a você pede permissão para conectar.`;
         document.getElementById('permissionModal').classList.remove('hidden');
         return;
       }
@@ -651,12 +877,12 @@
           knownDevices.set(msg.senderId, d);
           renderDevicesList();
           renderNearbyList();
-          addActivityItem(`Permissão concedida por ${msg.senderName}`, 'Conexão próxima autorizada', 'Autorizado');
+          showToast(`Conectado ao aparelho próximo: ${msg.senderName}`);
         }
         return;
       }
 
-      // Sinalização WebRTC (Oferta, Resposta e Candidatos ICE)
+      // Sinalização WebRTC P2P
       if (msg.targetId && msg.targetId !== deviceId) return;
 
       if (msg.type === 'webrtc-offer') {
@@ -677,7 +903,7 @@
     }
 
     // ============================================================================
-    // 5. MOTOR WEBRTC P2P ILIMITADO + GRAVAÇÃO DIRETA NO DISCO (PASSO 3)
+    // 6. TRANSFERÊNCIA WEBRTC P2P SEM LIMITES + GRAVAÇÃO NO DISCO
     // ============================================================================
     function getOrCreatePeerConnection(peerId) {
       if (peerConnections[peerId]) return peerConnections[peerId];
@@ -701,13 +927,17 @@
     function setupDataChannel(peerId, channel) {
       channel.binaryType = 'arraybuffer';
       dataChannels[peerId] = channel;
-
       channel.onmessage = (e) => handleIncomingData(e.data);
     }
 
     async function ensureDataChannel(peerId) {
       if (dataChannels[peerId] && dataChannels[peerId].readyState === 'open') {
         return dataChannels[peerId];
+      }
+
+      if (peerConnections[peerId]) {
+        try { peerConnections[peerId].close(); } catch (e) {}
+        delete peerConnections[peerId];
       }
 
       const pc = getOrCreatePeerConnection(peerId);
@@ -719,7 +949,7 @@
       sendSignal({ type: 'webrtc-offer', targetId: peerId, sdp: pc.localDescription });
 
       return new Promise((resolve, reject) => {
-        const timeout = setTimeout(() => reject(new Error('Tempo limite de conexão P2P')), 10000);
+        const timeout = setTimeout(() => reject(new Error('Tempo limite P2P')), 12000);
         channel.onopen = () => {
           clearTimeout(timeout);
           resolve(channel);
@@ -730,24 +960,27 @@
     async function handleFilesSelected(fileList) {
       if (!fileList || fileList.length === 0) return;
 
-      const targets = Array.from(knownDevices.values()).filter(d => !d.isSelf && d.authorized && (selectedTargetDeviceId === 'all' || d.id === selectedTargetDeviceId));
+      const targets = Array.from(knownDevices.values()).filter(
+        d => !d.isSelf && d.authorized && (selectedTargetDeviceId === 'all' || d.id === selectedTargetDeviceId)
+      );
+
+      if (targets.length === 0) {
+        showToast('Abra o app no seu outro aparelho com a mesma conta para enviar!');
+        return;
+      }
 
       for (const file of Array.from(fileList)) {
-        if (targets.length === 0) {
-          // Simulação visual caso o usuário esteja testando com apenas 1 aba aberta
-          await simulateSingleTabTransfer(file);
-        } else {
-          for (const target of targets) {
-            await sendFileP2P(file, target.id, target.name);
-          }
+        for (const target of targets) {
+          await sendFileP2P(file, target.id, target.name);
         }
       }
     }
 
     async function sendFileP2P(file, peerId, peerName) {
       try {
+        document.getElementById('transferStatusFooter').textContent = `Conectando P2P com ${peerName}...`;
         const channel = await ensureDataChannel(peerId);
-        const chunkSize = 64 * 1024; // Pedaços de 64 KB (não estoura memória RAM)
+        const chunkSize = 64 * 1024;
         channel.bufferedAmountLowThreshold = 512 * 1024;
 
         transferStartTime = performance.now();
@@ -774,12 +1007,12 @@
 
         channel.send(JSON.stringify({ type: 'eof' }));
         finishTransferStats(file.name, file.size, `Enviado para ${peerName}`);
+        showToast(`Arquivo enviado para ${peerName}!`);
       } catch (err) {
-        await simulateSingleTabTransfer(file);
+        showToast(`Falha na conexão direta com ${peerName}. Verifique a rede.`);
       }
     }
 
-    // Recebimento de Arquivos com StreamSaver (Passo 3 - Grava direto no HD se > 50 MB)
     async function handleIncomingData(data) {
       if (typeof data === 'string') {
         const msg = JSON.parse(data);
@@ -812,6 +1045,7 @@
           }
 
           finishTransferStats(incomingMeta.name, incomingMeta.size, 'Recebido via P2P');
+          showToast(`Arquivo recebido: ${incomingMeta.name}`);
           receivedBuffers = [];
           incomingMeta = null;
         }
@@ -825,20 +1059,6 @@
         receivedSize += data.byteLength;
         if (incomingMeta) updateRingProgress(receivedSize, incomingMeta.size);
       }
-    }
-
-    async function simulateSingleTabTransfer(file) {
-      transferStartTime = performance.now();
-      const total = file.size || 1024 * 1024;
-      let sent = 0;
-      const step = Math.max(total / 25, 64 * 1024);
-
-      while (sent < total) {
-        await new Promise(r => setTimeout(r, 35));
-        sent = Math.min(total, sent + step);
-        updateRingProgress(sent, total);
-      }
-      finishTransferStats(file.name, file.size, 'Pronto (Abra outra aba para receber via P2P)');
     }
 
     function updateRingProgress(currentBytes, totalBytes) {
@@ -860,22 +1080,41 @@
     }
 
     // ============================================================================
-    // 6. ÁREA DE TRANSFERÊNCIA UNIVERSAL E CONTROLES DE INTERFACE
+    // 7. ÁREA DE TRANSFERÊNCIA UNIVERSAL E PROXIMIDADE
     // ============================================================================
     const clipInput = document.getElementById('universalClipboardInput');
     clipInput.addEventListener('input', () => {
-      broadcastClipboardNow();
+      clearTimeout(clipDebounceTimer);
+      clipDebounceTimer = setTimeout(() => broadcastClipboardNow(false), 300);
     });
 
-    function broadcastClipboardNow() {
+    async function broadcastClipboardNow(showNotification) {
       const text = clipInput.value;
       const shareNearby = document.getElementById('clipShareNearbyCheck').checked;
+
       sendSignal({
         type: 'clipboard',
-        account: currentUserEmail,
         text: text,
         shareNearby: shareNearby
       });
+
+      clipboardCounter++;
+      document.getElementById('statClipboardCount').textContent = clipboardCounter;
+
+      if (supabaseClient && currentUserId && text.trim()) {
+        try {
+          await supabaseClient.from('clipboard_sync').insert({
+            user_id: currentUserId,
+            sender_device: deviceId,
+            content: text,
+            visibility: shareNearby ? 'nearby' : 'private'
+          });
+        } catch (e) {}
+      }
+
+      if (showNotification) {
+        showToast('Texto enviado para seus aparelhos!');
+      }
     }
 
     async function pasteFromSystemClipboard() {
@@ -883,13 +1122,12 @@
         const text = await navigator.clipboard.readText();
         if (text) {
           clipInput.value = text;
-          clipboardCounter++;
-          document.getElementById('statClipboardCount').textContent = clipboardCounter;
-          broadcastClipboardNow();
-          addActivityItem('Texto colado do sistema', text.substring(0, 40) + '...', 'Sincronizado');
+          await broadcastClipboardNow(true);
+          addActivityItem('Texto colado do sistema', text.substring(0, 45), 'Sincronizado');
         }
       } catch (e) {
         clipInput.focus();
+        showToast('Segure no campo de texto e toque em Colar');
       }
     }
 
@@ -897,11 +1135,14 @@
       const text = clipInput.value;
       if (!text) return;
       await navigator.clipboard.writeText(text);
-      addActivityItem('Copiado para o aparelho atual', text.substring(0, 40), 'Copiado');
+      showToast('Texto copiado para a área de transferência do aparelho!');
+      addActivityItem('Copiado para o aparelho', text.substring(0, 45), 'Copiado');
     }
 
     function toggleNearbyVisibility() {
       allowNearby = !allowNearby;
+      localStorage.setItem('omnisync_allow_nearby', allowNearby ? 'true' : 'false');
+
       const orb = document.getElementById('orbNearby');
       const label = document.getElementById('orbNearbyLabel');
       const pill = document.getElementById('nearbyStatusPill');
@@ -912,6 +1153,7 @@
         label.className = 'text-xs font-medium text-sky-300';
         pill.textContent = 'Visível ao redor';
         pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300';
+        showToast('Visível para aparelhos próximos!');
       } else {
         orb.classList.remove('active');
         label.textContent = 'Próximos: Off';
@@ -919,7 +1161,7 @@
         pill.textContent = 'Invisível';
         pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700 text-slate-400';
       }
-      announcePresence();
+      trackAndAnnounce();
       renderNearbyList();
     }
 
@@ -940,7 +1182,7 @@
 
     function requestNearbyAccess(peerId) {
       sendSignal({ type: 'nearby-request', targetId: peerId });
-      addActivityItem('Solicitação enviada', 'Aguardando permissão do aparelho próximo...', 'Pendente');
+      showToast('Pedido de permissão enviado!');
     }
 
     function respondNearbyPermission(accepted) {
@@ -983,7 +1225,7 @@
               </div>
               <div>
                 <p class="text-xs sm:text-sm font-semibold text-white">${dev.name}</p>
-                <p class="text-[11px] text-sky-400/80">${dev.os} • ${dev.isSelf ? 'Aparelho Atual' : 'Pronto para P2P'}</p>
+                <p class="text-[11px] text-sky-400/80">${dev.os} • ${dev.isSelf ? 'Este Aparelho' : 'Conectado na Conta'}</p>
               </div>
             </div>
             <span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300">
@@ -1012,7 +1254,7 @@
           </div>
           ${
             p.authorized
-              ? `<span class="text-[10px] text-emerald-400 font-semibold">Conectado</span>`
+              ? `<span class="text-[10px] text-emerald-400 font-semibold">Autorizado</span>`
               : `<button onclick="requestNearbyAccess('${p.id}')" class="px-2.5 py-1 rounded-lg bg-blue-600 text-[10px] font-semibold text-white">Pedir Permissão</button>`
           }
         </div>
@@ -1048,28 +1290,6 @@
       document.getElementById('activityFeed').innerHTML = '';
     }
 
-    function setViewportMode(mode) {
-      const main = document.getElementById('mainViewport');
-      const rightCol = document.getElementById('rightColumn');
-      const leftCol = document.getElementById('leftColumn');
-      const autoBtn = document.getElementById('viewAutoBtn');
-      const mobBtn = document.getElementById('viewMobileBtn');
-
-      if (mode === 'mobile') {
-        main.className = 'w-full max-w-[420px] mx-auto p-4 flex-1 flex flex-col gap-5 transition-all duration-300';
-        leftCol.className = 'w-full space-y-5';
-        rightCol.className = 'w-full space-y-5';
-        mobBtn.className = 'px-3 py-1 rounded-full bg-blue-600 text-white font-medium transition';
-        autoBtn.className = 'px-3 py-1 rounded-full text-slate-400 hover:text-white transition';
-      } else {
-        main.className = 'w-full max-w-7xl mx-auto p-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start transition-all duration-300';
-        leftCol.className = 'lg:col-span-5 space-y-5';
-        rightCol.className = 'lg:col-span-7 space-y-5';
-        autoBtn.className = 'px-3 py-1 rounded-full bg-blue-600 text-white font-medium transition';
-        mobBtn.className = 'px-3 py-1 rounded-full text-slate-400 hover:text-white transition';
-      }
-    }
-
     function formatBytes(bytes) {
       if (!bytes || bytes === 0) return '0.0 MB';
       const k = 1024;
@@ -1078,7 +1298,7 @@
       return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
-    // Drag and Drop de arquivos na zona orbital
+    // Drag and Drop
     const dropZone = document.getElementById('dropZone');
     dropZone.addEventListener('dragover', (e) => {
       e.preventDefault();
@@ -1094,6 +1314,7 @@
     });
 
     lucide.createIcons();
+    restorePreviousSession();
   </script>
 </body>
 </html>
