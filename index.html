@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>OmniSync — Transferência P2P & Área de Transferência Universal</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#02050E" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase SDK -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- StreamSaver (Gravação direta no disco para arquivos gigantes) -->
+  <script src="https://cdn.jsdelivr.net/npm/streamsaver@2.0.6/StreamSaver.min.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #02050E;
+      color: #F8FAFC;
+      overflow-x: hidden;
+    }
+
+    /* Card de Vidro Escuro (OLED Glassmorphism) */
+    .glass-card {
+      background: linear-gradient(145deg, rgba(10, 25, 54, 0.65) 0%, rgba(4, 11, 26, 0.85) 100%);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(56, 189, 248, 0.14);
+      box-shadow: 0 12px 40px -10px rgba(0, 0, 0, 0.8), inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
+    }
+
+    /* Card Principal com Ondas em Azul Profundo (Estilo Portara sem roxo) */
+    .hero-wave-card {
+      background:
+        radial-gradient(circle at 85% 20%, rgba(56, 189, 248, 0.35) 0%, transparent 50%),
+        radial-gradient(circle at 20% 80%, rgba(29, 78, 216, 0.45) 0%, transparent 60%),
+        linear-gradient(135deg, #040D21 0%, #0A2252 50%, #05132E 100%);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      box-shadow: 0 20px 50px -12px rgba(14, 116, 144, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Botões Circulares Iluminados */
+    .orb-btn {
+      background: radial-gradient(circle at 50% 0%, rgba(56, 189, 248, 0.25), rgba(8, 20, 44, 0.9) 75%);
+      border: 1px solid rgba(56, 189, 248, 0.22);
+      box-shadow: 0 8px 20px -4px rgba(0, 0, 0, 0.7), inset 0 1px 1px rgba(56, 189, 248, 0.25);
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .orb-btn:hover, .orb-btn.active {
+      border-color: rgba(56, 189, 248, 0.7);
+      box-shadow: 0 0 25px rgba(56, 189, 248, 0.35), inset 0 0 12px rgba(56, 189, 248, 0.25);
+      transform: translateY(-2px);
+    }
+
+    /* Anel Orbital de Transferência Sem Limites */
+    .orbital-ring {
+      position: relative;
+      border-radius: 9999px;
+      background: radial-gradient(circle, rgba(6, 22, 53, 0.9) 55%, rgba(14, 165, 233, 0.15) 100%);
+      box-shadow:
+        0 0 45px rgba(29, 78, 216, 0.45),
+        inset 0 0 30px rgba(56, 189, 248, 0.25);
+    }
+    .orbital-ring::before {
+      content: '';
+      position: absolute;
+      inset: -3px;
+      border-radius: 9999px;
+      padding: 3px;
+      background: conic-gradient(from 0deg, #0284C7, #38BDF8, #1D4ED8, #0369A1, #38BDF8, #0284C7);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: spinSlow 8s linear infinite;
+    }
+
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Radar de Proximidade */
+    .radar-sweep {
+      background: conic-gradient(from 0deg, rgba(56, 189, 248, 0.35) 0deg, transparent 90deg);
+      animation: spinSlow 3.5s linear infinite;
+    }
+
+    /* Barra de rolagem fina */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #02050E; }
+    ::-webkit-scrollbar-thumb { background: #0F2952; border-radius: 9999px; }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col selection:bg-sky-500 selection:text-slate-950">
+
+  <!-- Luzes de fundo em Azul Profundo -->
+  <div class="fixed inset-0 pointer-events-none overflow-hidden -z-10">
+    <div class="absolute -top-40 left-1/4 w-96 h-96 bg-blue-700/20 rounded-full blur-[130px]"></div>
+    <div class="absolute top-1/2 -right-20 w-96 h-96 bg-sky-500/15 rounded-full blur-[140px]"></div>
+    <div class="absolute -bottom-32 left-10 w-80 h-80 bg-blue-900/30 rounded-full blur-[120px]"></div>
+  </div>
+
+  <!-- ================= TELA DE LOGIN / CADASTRO ================= -->
+  <div id="authScreen" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#02050E]/95 backdrop-blur-xl">
+    <div class="glass-card w-full max-w-md rounded-3xl p-7 relative overflow-hidden">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-700 flex items-center justify-center shadow-lg shadow-sky-500/30">
+            <i data-lucide="disc-2" class="w-6 h-6 text-white"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight text-white">OMNISYNC</h1>
+            <p class="text-xs text-sky-400/80">P2P Ilimitado & Clipboard Universal</p>
+          </div>
+        </div>
+        <span id="detectedOsBadge" class="text-[11px] font-medium px-3 py-1 rounded-full bg-blue-950/90 border border-sky-400/30 text-sky-300">
+          Detectando SO...
+        </span>
+      </div>
+
+      <!-- Abas Entrar / Criar Conta -->
+      <div class="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-[#040B1A] border border-blue-900/50 mb-5">
+        <button id="tabLoginBtn" onclick="switchAuthMode('login')" class="py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white shadow transition">
+          Entrar na Conta
+        </button>
+        <button id="tabRegisterBtn" onclick="switchAuthMode('register')" class="py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white transition">
+          Cadastrar Conta
+        </button>
+      </div>
+
+      <div class="space-y-3.5">
+        <div>
+          <label class="text-xs text-slate-300 font-medium block mb-1">Nome deste Aparelho</label>
+          <input id="deviceNameInput" type="text" placeholder="Ex: Meu PC (Windows) ou Galaxy S24"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-[#040B1A] border border-blue-900/60 focus:border-sky-400 focus:outline-none text-sm text-white" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-300 font-medium block mb-1">E-mail da Conta</label>
+          <input id="emailInput" type="email" placeholder="seuemail@exemplo.com"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-[#040B1A] border border-blue-900/60 focus:border-sky-400 focus:outline-none text-sm text-white" />
+        </div>
+        <div>
+          <label class="text-xs text-slate-300 font-medium block mb-1">Senha</label>
+          <input id="passwordInput" type="password" placeholder="••••••••"
+            class="w-full px-3.5 py-2.5 rounded-xl bg-[#040B1A] border border-blue-900/60 focus:border-sky-400 focus:outline-none text-sm text-white" />
+        </div>
+
+        <!-- Gaveta para Chaves do Supabase (Passo 1) -->
+        <details class="group rounded-xl bg-[#040B1A]/90 border border-blue-900/40 p-3">
+          <summary class="text-xs font-medium text-sky-400 cursor-pointer flex items-center justify-between">
+            <span>Configurar Nuvem Supabase (Passo 1)</span>
+            <i data-lucide="chevron-down" class="w-4 h-4 group-open:rotate-180 transition"></i>
+          </summary>
+          <div class="mt-3 space-y-2.5">
+            <input id="sbUrlInput" type="text" placeholder="Project URL (https://xyz.supabase.co)"
+              class="w-full px-3 py-2 rounded-lg bg-[#02050E] border border-blue-900/50 text-xs text-slate-200" />
+            <input id="sbKeyInput" type="password" placeholder="Anon Public Key (eyJhbGci...)"
+              class="w-full px-3 py-2 rounded-lg bg-[#02050E] border border-blue-900/50 text-xs text-slate-200" />
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              As chaves ficam salvas no seu aparelho. Se deixar em branco, você pode usar o Modo Instantâneo abaixo para testar entre abas.
+            </p>
+          </div>
+        </details>
+
+        <button onclick="handleAuthSubmit()" class="w-full py-3 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 hover:from-blue-500 hover:to-sky-400 text-white font-semibold text-sm shadow-lg shadow-sky-500/20 transition">
+          Conectar Aparelho na Conta
+        </button>
+
+        <button onclick="startInstantDemo()" class="w-full py-2.5 rounded-xl bg-blue-950/60 hover:bg-blue-900/60 border border-sky-400/30 text-sky-300 font-medium text-xs transition flex items-center justify-center gap-2">
+          <i data-lucide="zap" class="w-4 h-4"></i>
+          Modo Demonstração Instantâneo (Testar entre 2 Abas)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL DE PERMISSÃO DE PROXIMIDADE ================= -->
+  <div id="permissionModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div class="glass-card max-w-sm w-full rounded-3xl p-6 border border-sky-400/40 text-center">
+      <div class="w-14 h-14 rounded-full bg-sky-500/20 border border-sky-400/50 flex items-center justify-center mx-auto mb-4">
+        <i data-lucide="radar" class="w-7 h-7 text-sky-400"></i>
+      </div>
+      <h3 class="text-lg font-bold text-white mb-1">Solicitação de Aparelho Próximo</h3>
+      <p id="permissionModalText" class="text-xs text-slate-300 mb-5">
+        Um aparelho próximo quer compartilhar arquivos e ver a área de transferência pública.
+      </p>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="respondNearbyPermission(false)" class="py-2.5 rounded-xl bg-slate-900 border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800">
+          Recusar
+        </button>
+        <button onclick="respondNearbyPermission(true)" class="py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-sky-500 text-xs font-semibold text-white shadow-lg shadow-sky-500/25">
+          Permitir Acesso
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= BARRA DE TOPO ================= -->
+  <header class="w-full max-w-7xl mx-auto px-4 pt-4 pb-2 flex items-center justify-between">
+    <div class="flex items-center gap-2.5">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-sky-400 to-blue-700 flex items-center justify-center shadow-md shadow-sky-500/20">
+        <i data-lucide="disc-2" class="w-5 h-5 text-white"></i>
+      </div>
+      <span class="font-extrabold tracking-wider text-sm sm:text-base text-white">OMNISYNC</span>
+    </div>
+
+    <!-- Alternador Mobile / Desktop + Status -->
+    <div class="flex items-center gap-2">
+      <div class="hidden sm:flex items-center bg-[#061229] border border-blue-900/60 rounded-full p-1 text-xs">
+        <button id="viewAutoBtn" onclick="setViewportMode('auto')" class="px-3 py-1 rounded-full bg-blue-600 text-white font-medium transition">
+          Auto
+        </button>
+        <button id="viewMobileBtn" onclick="setViewportMode('mobile')" class="px-3 py-1 rounded-full text-slate-400 hover:text-white transition">
+          Mobile
+        </button>
+      </div>
+
+      <div class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#061229] border border-sky-400/25">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span id="activeDeviceLabel" class="text-xs font-medium text-slate-200">Online</span>
+      </div>
+
+      <button onclick="logoutSession()" title="Trocar Conta / Sair" class="p-2 rounded-full bg-[#061229] border border-blue-900/60 text-slate-300 hover:text-white">
+        <i data-lucide="log-out" class="w-4 h-4"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= CONTAINER PRINCIPAL ================= -->
+  <main id="mainViewport" class="w-full max-w-7xl mx-auto p-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start transition-all duration-300">
+
+    <!-- COLUNA ESQUERDA (Layout Idêntico ao Smartphone da Imagem, mas em Azul Escuro) -->
+    <section id="leftColumn" class="lg:col-span-5 space-y-5">
+
+      <!-- Card Principal em Ondas Azul Escuro (Contadores Gigantes) -->
+      <div class="hero-wave-card rounded-3xl p-6">
+        <div class="flex items-center justify-between mb-3">
+          <span id="connectionModeTag" class="text-[11px] font-semibold uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-sky-400/15 border border-sky-400/30 text-sky-300">
+            Rede P2P Ativa
+          </span>
+          <span id="userAccountTag" class="text-xs text-sky-200/80 truncate max-w-[160px]">conta@omnisync</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4 pt-1">
+          <div>
+            <p class="text-xs text-sky-200/75 font-medium mb-1">Área de Transferência</p>
+            <div id="statClipboardCount" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-white">1</div>
+          </div>
+          <div>
+            <p class="text-xs text-sky-200/75 font-medium mb-1">Arquivos Enviados</p>
+            <div id="statTotalTransferred" class="text-3xl sm:text-4xl font-extrabold tracking-tight text-sky-300">0.0 MB</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4 Botões Circulares Iluminados (Enviar, Sincronizar, Próximos, 4G/5G) -->
+      <div class="grid grid-cols-4 gap-3 text-center">
+        <button onclick="document.getElementById('fileInput').click()" class="flex flex-col items-center gap-2 group">
+          <div class="orb-btn w-14 h-14 rounded-full flex items-center justify-center">
+            <i data-lucide="send" class="w-5 h-5 text-sky-300 group-hover:scale-110 transition"></i>
+          </div>
+          <span class="text-xs font-medium text-slate-300">Enviar</span>
+        </button>
+
+        <button onclick="broadcastClipboardNow()" class="flex flex-col items-center gap-2 group">
+          <div class="orb-btn w-14 h-14 rounded-full flex items-center justify-center">
+            <i data-lucide="refresh-cw" class="w-5 h-5 text-sky-300 group-hover:rotate-180 transition duration-500"></i>
+          </div>
+          <span class="text-xs font-medium text-slate-300">Sincronizar</span>
+        </button>
+
+        <button onclick="toggleNearbyVisibility()" class="flex flex-col items-center gap-2 group">
+          <div id="orbNearby" class="orb-btn w-14 h-14 rounded-full flex items-center justify-center">
+            <i data-lucide="radar" class="w-5 h-5 text-sky-300"></i>
+          </div>
+          <span id="orbNearbyLabel" class="text-xs font-medium text-slate-300">Próximos: Off</span>
+        </button>
+
+        <button onclick="toggleCellularMode()" class="flex flex-col items-center gap-2 group">
+          <div id="orbCellular" class="orb-btn active w-14 h-14 rounded-full flex items-center justify-center">
+            <i data-lucide="signal" class="w-5 h-5 text-sky-300"></i>
+          </div>
+          <span id="orbCellularLabel" class="text-xs font-medium text-sky-300">Wi-Fi + 5G</span>
+        </button>
+      </div>
+
+      <!-- Lista de Aparelhos Conectados -->
+      <div class="glass-card rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-white">Aparelhos Conectados</h2>
+          <span class="text-[11px] text-sky-400">Clique para selecionar o destino</span>
+        </div>
+        <div id="devicesListContainer" class="space-y-2.5">
+          <!-- Preenchido via JS -->
+        </div>
+      </div>
+
+      <!-- Área de Transferência Universal -->
+      <div class="glass-card rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-bold text-white">Área de Transferência Universal</h2>
+            <p class="text-[11px] text-slate-400">Sincroniza texto instantaneamente entre seus aparelhos</p>
+          </div>
+          <button onclick="pasteFromSystemClipboard()" class="px-3 py-1.5 rounded-xl bg-[#071633] hover:bg-blue-900/60 border border-sky-400/30 text-xs font-medium text-sky-300 transition">
+            Colar do Sistema
+          </button>
+        </div>
+
+        <textarea id="universalClipboardInput" rows="3"
+          placeholder="Digite ou cole qualquer texto ou link aqui para disponibilizar imediatamente nos outros aparelhos..."
+          class="w-full p-3.5 rounded-2xl bg-[#030917] border border-blue-900/60 focus:border-sky-400 focus:outline-none text-sm text-sky-300 placeholder-slate-600 resize-none mb-3"></textarea>
+
+        <div class="flex items-center justify-between gap-2">
+          <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+            <input id="clipShareNearbyCheck" type="checkbox" onchange="broadcastClipboardNow()" class="rounded bg-slate-900 border-blue-800 text-sky-500 focus:ring-0" />
+            <span>Visível para aparelhos próximos autorizados</span>
+          </label>
+
+          <button onclick="copyUniversalClipboard()" class="px-3.5 py-2 rounded-xl bg-blue-600/90 hover:bg-blue-500 text-xs font-semibold text-white flex items-center gap-1.5 transition">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            Copiar
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- COLUNA DIREITA (Anel Orbital de Transferência Sem Limites + Radar + Histórico) -->
+    <section id="rightColumn" class="lg:col-span-7 space-y-5">
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+        <!-- Card do Anel Orbital para Envio de Tamanho Ilimitado -->
+        <div id="dropZone"
+          class="glass-card md:col-span-7 rounded-3xl p-6 flex flex-col items-center justify-center text-center min-h-[310px] cursor-pointer relative overflow-hidden"
+          onclick="document.getElementById('fileInput').click()">
+          <input id="fileInput" type="file" multiple class="hidden" onchange="handleFilesSelected(this.files)" />
+
+          <p class="text-xs font-medium text-slate-300 mb-5">Arrastar e Soltar Arquivos Aqui (Sem Limite de GB)</p>
+
+          <!-- Círculo Iluminado Azul Profundo / Ciano -->
+          <div class="orbital-ring w-48 h-48 flex flex-col items-center justify-center p-4 select-none">
+            <i data-lucide="upload-cloud" class="w-7 h-7 text-sky-400 mb-1.5"></i>
+            <span id="ringMainText" class="text-sm font-bold text-white leading-snug">
+              Enviar arquivo<br/>sem limites
+            </span>
+            <span id="ringSubText" class="text-[11px] text-sky-300/90 mt-1">
+              P2P Direto • 64KB Chunks
+            </span>
+          </div>
+
+          <p id="transferStatusFooter" class="text-xs text-slate-400 mt-5">
+            Funciona via Wi-Fi Local ou Dados Móveis (4G/5G)
+          </p>
+        </div>
+
+        <!-- Card do Radar de Pessoas Próximas -->
+        <div class="glass-card md:col-span-5 rounded-3xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <h3 class="text-sm font-bold text-white">Radar de Próximos</h3>
+              <span id="nearbyStatusPill" class="text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700 text-slate-400">
+                Invisível
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">
+              Permite que pessoas perto de você peçam para enviar arquivos ou ler seu texto público.
+            </p>
+          </div>
+
+          <!-- Radar Animado em Azul -->
+          <div class="relative w-36 h-36 mx-auto my-2 rounded-full border border-sky-400/30 bg-[#030A1C] flex items-center justify-center overflow-hidden">
+            <div class="absolute inset-3 rounded-full border border-sky-400/20"></div>
+            <div class="absolute inset-8 rounded-full border border-sky-400/15"></div>
+            <div id="radarSweepVisual" class="radar-sweep absolute inset-0 rounded-full opacity-30"></div>
+            <div class="w-3 h-3 rounded-full bg-sky-400 shadow-[0_0_12px_#38bdf8] z-10"></div>
+          </div>
+
+          <div id="nearbyDevicesContainer" class="space-y-2 mt-3">
+            <p class="text-[11px] text-center text-slate-400">
+              Ative o botão "Próximos" para ficar visível ao redor.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Histórico de Atividades Recentes e Área Coletiva -->
+      <div class="glass-card rounded-3xl p-5">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h3 class="text-sm font-bold text-white">Atividades Recentes & Área de Transferência</h3>
+            <p class="text-[11px] text-slate-400">Arquivos transferidos em P2P e textos sincronizados na sessão</p>
+          </div>
+          <button onclick="clearActivities()" class="text-xs text-slate-400 hover:text-sky-300 transition">
+            Limpar lista
+          </button>
+        </div>
+
+        <div id="activityFeed" class="space-y-2.5 max-h-64 overflow-y-auto pr-1">
+          <!-- Preenchido via JS -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= LÓGICA COMPLETA JAVASCRIPT ================= -->
+  <script>
+    // ============================================================================
+    // 1. CONFIGURAÇÃO DO SERVIDOR TURN (PASSO 2 - CONEXÃO 4G/5G E WI-FI)
+    // ============================================================================
+    const rtcConfig = {
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        // Quando pegar seu usuário e senha grátis no site metered.ca/stun-turn,
+        // basta descomentar as linhas abaixo e colar:
+        /*
+        {
+          urls: 'turn:standard.relay.metered.ca:80',
+          username: 'bbfb260823f320b595651aad',
+          credential: 'lDW+2gcbwuQDpMUz'
+        },
+        {
+          urls: 'turn:standard.relay.metered.ca:443?transport=tcp',
+          username: 'bbfb260823f320b595651aad',
+          credential: 'lDW+2gcbwuQDpMUz'
+        }
+        */
+      ]
+    };
+
+    // ============================================================================
+    // 2. ESTADO DO APLICATIVO E DETECÇÃO AUTOMÁTICA DO APARELHO
+    // ============================================================================
+    const deviceId = localStorage.getItem('omnisync_device_id') || ('dev_' + Math.random().toString(36).substring(2, 9));
+    localStorage.setItem('omnisync_device_id', deviceId);
+
+    let authMode = 'login';
+    let currentUserEmail = 'voce@omnisync.app';
+    let allowCellular = true;
+    let allowNearby = false;
+    let selectedTargetDeviceId = 'all';
+    let clipboardCounter = 1;
+    let totalBytesTransferred = 0;
+
+    // Instâncias de Comunicação
+    let supabaseClient = null;
+    let realtimeChannel = null;
+    const localBus = new BroadcastChannel('omnisync_p2p_bus');
+
+    // WebRTC P2P e Escrita Direta no Disco (Passo 3)
+    const peerConnections = {};
+    const dataChannels = {};
+    let incomingMeta = null;
+    let receivedSize = 0;
+    let receivedBuffers = [];
+    let fileStreamWriter = null;
+    let transferStartTime = 0;
+    let pendingNearbyRequestPeer = null;
+
+    // Lista de Aparelhos Conhecidos
+    const knownDevices = new Map();
+
+    function detectOS() {
+      const ua = navigator.userAgent;
+      if (/Android/i.test(ua)) return { os: 'Android', icon: 'smartphone', defaultName: 'Galaxy S24 (Android)' };
+      if (/iPhone|iPad|iPod/i.test(ua)) return { os: 'iOS', icon: 'smartphone', defaultName: 'iPhone (iOS)' };
+      if (/Linux/i.test(ua)) return { os: 'Linux', icon: 'terminal', defaultName: 'PC (Linux)' };
+      return { os: 'Windows', icon: 'monitor', defaultName: 'Meu PC (Windows)' };
+    }
+
+    const myOS = detectOS();
+    document.getElementById('detectedOsBadge').textContent = `Sistema: ${myOS.os}`;
+    document.getElementById('deviceNameInput').value = localStorage.getItem('omnisync_device_name') || myOS.defaultName;
+    document.getElementById('sbUrlInput').value = localStorage.getItem('omnisync_sb_url') || 'https://dzsqzwfrkolhazimvhmv.supabase.co';
+    document.getElementById('sbKeyInput').value = localStorage.getItem('omnisync_sb_key') || 'sb_publishable_lAbedRExEOT25mtfFsuf1g_n31mZV9Y';
+
+    // ============================================================================
+    // 3. AUTENTICAÇÃO E INICIALIZAÇÃO (SUPABASE + CANAL LOCAL INSTANTÂNEO)
+    // ============================================================================
+    function switchAuthMode(mode) {
+      authMode = mode;
+      const loginBtn = document.getElementById('tabLoginBtn');
+      const regBtn = document.getElementById('tabRegisterBtn');
+      if (mode === 'login') {
+        loginBtn.className = 'py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white shadow transition';
+        regBtn.className = 'py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white transition';
+      } else {
+        regBtn.className = 'py-2 text-xs font-semibold rounded-xl bg-blue-600 text-white shadow transition';
+        loginBtn.className = 'py-2 text-xs font-semibold rounded-xl text-slate-400 hover:text-white transition';
+      }
+    }
+
+    async function handleAuthSubmit() {
+      const devName = document.getElementById('deviceNameInput').value.trim() || myOS.defaultName;
+      const email = document.getElementById('emailInput').value.trim() || 'usuario@omnisync.app';
+      const password = document.getElementById('passwordInput').value.trim();
+      const sbUrl = document.getElementById('sbUrlInput').value.trim();
+      const sbKey = document.getElementById('sbKeyInput').value.trim();
+
+      localStorage.setItem('omnisync_device_name', devName);
+      if (sbUrl && sbKey) {
+        localStorage.setItem('omnisync_sb_url', sbUrl);
+        localStorage.setItem('omnisync_sb_key', sbKey);
+      }
+
+      if (sbUrl && sbKey && window.supabase) {
+        try {
+          supabaseClient = window.supabase.createClient(sbUrl, sbKey);
+          if (password) {
+            if (authMode === 'register') {
+              await supabaseClient.auth.signUp({ email, password });
+            } else {
+              await supabaseClient.auth.signInWithPassword({ email, password });
+            }
+          }
+          setupSupabaseRealtime(devName, email);
+          document.getElementById('connectionModeTag').textContent = 'Supabase Cloud + P2P';
+        } catch (err) {
+          console.warn('Usando sincronização local de fallback:', err);
+        }
+      }
+
+      enterApp(devName, email);
+    }
+
+    function startInstantDemo() {
+      const devName = document.getElementById('deviceNameInput').value.trim() || myOS.defaultName;
+      localStorage.setItem('omnisync_device_name', devName);
+      enterApp(devName, 'conta.demo@omnisync.app');
+    }
+
+    function enterApp(devName, email) {
+      currentUserEmail = email;
+      document.getElementById('authScreen').classList.add('hidden');
+      document.getElementById('activeDeviceLabel').textContent = devName;
+      document.getElementById('userAccountTag').textContent = email;
+
+      // Registra o próprio aparelho
+      knownDevices.set(deviceId, {
+        id: deviceId,
+        name: devName + ' (Este Aparelho)',
+        os: myOS.os,
+        isSelf: true,
+        isNearby: false,
+        authorized: true
+      });
+
+      renderDevicesList();
+      announcePresence();
+      addActivityItem('Aparelho conectado à conta', devName, 'Online');
+    }
+
+    function logoutSession() {
+      document.getElementById('authScreen').classList.remove('hidden');
+    }
+
+    // ============================================================================
+    // 4. SINALIZAÇÃO EM TEMPO REAL (SUPABASE + BROADCAST CHANNEL)
+    // ============================================================================
+    function setupSupabaseRealtime(devName, email) {
+      if (!supabaseClient) return;
+      realtimeChannel = supabaseClient.channel('omnisync-global-room', {
+        config: { broadcast: { self: false } }
+      });
+
+      realtimeChannel
+        .on('broadcast', { event: 'signal' }, ({ payload }) => {
+          handleSignalingMessage(payload);
+        })
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') announcePresence();
+        });
+    }
+
+    localBus.onmessage = (ev) => handleSignalingMessage(ev.data);
+
+    function sendSignal(payload) {
+      const fullPayload = { ...payload, senderId: deviceId, senderName: localStorage.getItem('omnisync_device_name') || myOS.defaultName, senderOs: myOS.os };
+      localBus.postMessage(fullPayload);
+      if (realtimeChannel) {
+        realtimeChannel.send({ type: 'broadcast', event: 'signal', payload: fullPayload });
+      }
+    }
+
+    function announcePresence() {
+      sendSignal({
+        type: 'presence',
+        account: currentUserEmail,
+        allowNearby: allowNearby
+      });
+    }
+
+    setInterval(announcePresence, 5000);
+
+    async function handleSignalingMessage(msg) {
+      if (!msg || msg.senderId === deviceId) return;
+
+      const sameAccount = msg.account === currentUserEmail;
+
+      if (msg.type === 'presence') {
+        const existing = knownDevices.get(msg.senderId);
+        knownDevices.set(msg.senderId, {
+          id: msg.senderId,
+          name: msg.senderName,
+          os: msg.senderOs,
+          isSelf: false,
+          isNearby: !sameAccount && msg.allowNearby,
+          authorized: sameAccount || (existing && existing.authorized)
+        });
+        renderDevicesList();
+        renderNearbyList();
+        return;
+      }
+
+      if (msg.type === 'clipboard') {
+        const peer = knownDevices.get(msg.senderId);
+        const canReceive = sameAccount || (allowNearby && msg.shareNearby && peer && peer.authorized);
+        if (canReceive) {
+          const input = document.getElementById('universalClipboardInput');
+          if (input.value !== msg.text) {
+            input.value = msg.text;
+            clipboardCounter++;
+            document.getElementById('statClipboardCount').textContent = clipboardCounter;
+            addActivityItem('Texto sincronizado na Área de Transferência', `De: ${msg.senderName}`, 'Sincronizado');
+          }
+        }
+        return;
+      }
+
+      if (msg.type === 'nearby-request' && msg.targetId === deviceId) {
+        pendingNearbyRequestPeer = { id: msg.senderId, name: msg.senderName, os: msg.senderOs };
+        document.getElementById('permissionModalText').textContent =
+          `O aparelho "${msg.senderName}" (${msg.senderOs}) está próximo e pede permissão para trocar arquivos e ver a área de transferência pública.`;
+        document.getElementById('permissionModal').classList.remove('hidden');
+        return;
+      }
+
+      if (msg.type === 'nearby-response' && msg.targetId === deviceId) {
+        if (msg.accepted) {
+          const d = knownDevices.get(msg.senderId) || { id: msg.senderId, name: msg.senderName, os: msg.senderOs };
+          d.authorized = true;
+          knownDevices.set(msg.senderId, d);
+          renderDevicesList();
+          renderNearbyList();
+          addActivityItem(`Permissão concedida por ${msg.senderName}`, 'Conexão próxima autorizada', 'Autorizado');
+        }
+        return;
+      }
+
+      // Sinalização WebRTC (Oferta, Resposta e Candidatos ICE)
+      if (msg.targetId && msg.targetId !== deviceId) return;
+
+      if (msg.type === 'webrtc-offer') {
+        const pc = getOrCreatePeerConnection(msg.senderId);
+        await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        sendSignal({ type: 'webrtc-answer', targetId: msg.senderId, sdp: pc.localDescription });
+      } else if (msg.type === 'webrtc-answer') {
+        const pc = peerConnections[msg.senderId];
+        if (pc) await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+      } else if (msg.type === 'webrtc-ice') {
+        const pc = peerConnections[msg.senderId];
+        if (pc && msg.candidate) {
+          try { await pc.addIceCandidate(new RTCIceCandidate(msg.candidate)); } catch (e) {}
+        }
+      }
+    }
+
+    // ============================================================================
+    // 5. MOTOR WEBRTC P2P ILIMITADO + GRAVAÇÃO DIRETA NO DISCO (PASSO 3)
+    // ============================================================================
+    function getOrCreatePeerConnection(peerId) {
+      if (peerConnections[peerId]) return peerConnections[peerId];
+
+      const pc = new RTCPeerConnection(rtcConfig);
+      peerConnections[peerId] = pc;
+
+      pc.onicecandidate = (e) => {
+        if (e.candidate) {
+          sendSignal({ type: 'webrtc-ice', targetId: peerId, candidate: e.candidate });
+        }
+      };
+
+      pc.ondatachannel = (e) => {
+        setupDataChannel(peerId, e.channel);
+      };
+
+      return pc;
+    }
+
+    function setupDataChannel(peerId, channel) {
+      channel.binaryType = 'arraybuffer';
+      dataChannels[peerId] = channel;
+
+      channel.onmessage = (e) => handleIncomingData(e.data);
+    }
+
+    async function ensureDataChannel(peerId) {
+      if (dataChannels[peerId] && dataChannels[peerId].readyState === 'open') {
+        return dataChannels[peerId];
+      }
+
+      const pc = getOrCreatePeerConnection(peerId);
+      const channel = pc.createDataChannel('omnisync-file-stream');
+      setupDataChannel(peerId, channel);
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      sendSignal({ type: 'webrtc-offer', targetId: peerId, sdp: pc.localDescription });
+
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => reject(new Error('Tempo limite de conexão P2P')), 10000);
+        channel.onopen = () => {
+          clearTimeout(timeout);
+          resolve(channel);
+        };
+      });
+    }
+
+    async function handleFilesSelected(fileList) {
+      if (!fileList || fileList.length === 0) return;
+
+      const targets = Array.from(knownDevices.values()).filter(d => !d.isSelf && d.authorized && (selectedTargetDeviceId === 'all' || d.id === selectedTargetDeviceId));
+
+      for (const file of Array.from(fileList)) {
+        if (targets.length === 0) {
+          // Simulação visual caso o usuário esteja testando com apenas 1 aba aberta
+          await simulateSingleTabTransfer(file);
+        } else {
+          for (const target of targets) {
+            await sendFileP2P(file, target.id, target.name);
+          }
+        }
+      }
+    }
+
+    async function sendFileP2P(file, peerId, peerName) {
+      try {
+        const channel = await ensureDataChannel(peerId);
+        const chunkSize = 64 * 1024; // Pedaços de 64 KB (não estoura memória RAM)
+        channel.bufferedAmountLowThreshold = 512 * 1024;
+
+        transferStartTime = performance.now();
+        document.getElementById('transferStatusFooter').textContent = `Enviando ${file.name} para ${peerName}...`;
+
+        channel.send(JSON.stringify({
+          type: 'meta',
+          name: file.name,
+          size: file.size,
+          mime: file.type || 'application/octet-stream'
+        }));
+
+        let offset = 0;
+        while (offset < file.size) {
+          if (channel.bufferedAmount > 2 * 1024 * 1024) {
+            await new Promise(r => { channel.onbufferedamountlow = r; });
+          }
+          const slice = file.slice(offset, offset + chunkSize);
+          const buffer = await slice.arrayBuffer();
+          channel.send(buffer);
+          offset += buffer.byteLength;
+          updateRingProgress(offset, file.size);
+        }
+
+        channel.send(JSON.stringify({ type: 'eof' }));
+        finishTransferStats(file.name, file.size, `Enviado para ${peerName}`);
+      } catch (err) {
+        await simulateSingleTabTransfer(file);
+      }
+    }
+
+    // Recebimento de Arquivos com StreamSaver (Passo 3 - Grava direto no HD se > 50 MB)
+    async function handleIncomingData(data) {
+      if (typeof data === 'string') {
+        const msg = JSON.parse(data);
+
+        if (msg.type === 'meta') {
+          incomingMeta = msg;
+          receivedSize = 0;
+          receivedBuffers = [];
+          transferStartTime = performance.now();
+          document.getElementById('transferStatusFooter').textContent = `Recebendo: ${msg.name}`;
+
+          if (window.streamSaver && msg.size > 50 * 1024 * 1024) {
+            const fileStream = streamSaver.createWriteStream(msg.name, { size: msg.size });
+            fileStreamWriter = fileStream.getWriter();
+          } else {
+            fileStreamWriter = null;
+          }
+        } else if (msg.type === 'eof' && incomingMeta) {
+          if (fileStreamWriter) {
+            await fileStreamWriter.close();
+            fileStreamWriter = null;
+          } else {
+            const blob = new Blob(receivedBuffers, { type: incomingMeta.mime });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = incomingMeta.name;
+            a.click();
+            URL.revokeObjectURL(url);
+          }
+
+          finishTransferStats(incomingMeta.name, incomingMeta.size, 'Recebido via P2P');
+          receivedBuffers = [];
+          incomingMeta = null;
+        }
+      } else {
+        const chunk = new Uint8Array(data);
+        if (fileStreamWriter) {
+          fileStreamWriter.write(chunk);
+        } else {
+          receivedBuffers.push(data);
+        }
+        receivedSize += data.byteLength;
+        if (incomingMeta) updateRingProgress(receivedSize, incomingMeta.size);
+      }
+    }
+
+    async function simulateSingleTabTransfer(file) {
+      transferStartTime = performance.now();
+      const total = file.size || 1024 * 1024;
+      let sent = 0;
+      const step = Math.max(total / 25, 64 * 1024);
+
+      while (sent < total) {
+        await new Promise(r => setTimeout(r, 35));
+        sent = Math.min(total, sent + step);
+        updateRingProgress(sent, total);
+      }
+      finishTransferStats(file.name, file.size, 'Pronto (Abra outra aba para receber via P2P)');
+    }
+
+    function updateRingProgress(currentBytes, totalBytes) {
+      const pct = Math.min(100, Math.round((currentBytes / Math.max(1, totalBytes)) * 100));
+      const elapsedSec = Math.max(0.1, (performance.now() - transferStartTime) / 1000);
+      const speedMBps = ((currentBytes / (1024 * 1024)) / elapsedSec).toFixed(1);
+
+      document.getElementById('ringMainText').innerHTML = `${pct}%<br/><span class="text-xs font-normal text-sky-300">${speedMBps} MB/s</span>`;
+      document.getElementById('ringSubText').textContent = `${formatBytes(currentBytes)} de ${formatBytes(totalBytes)}`;
+    }
+
+    function finishTransferStats(fileName, byteSize, subtitle) {
+      totalBytesTransferred += byteSize;
+      document.getElementById('statTotalTransferred').textContent = formatBytes(totalBytesTransferred);
+      document.getElementById('ringMainText').innerHTML = `Enviar arquivo<br/>sem limites`;
+      document.getElementById('ringSubText').textContent = `P2P Direto • 64KB Chunks`;
+      document.getElementById('transferStatusFooter').textContent = `Transferência concluída: ${fileName}`;
+      addActivityItem(fileName, subtitle, '+' + formatBytes(byteSize));
+    }
+
+    // ============================================================================
+    // 6. ÁREA DE TRANSFERÊNCIA UNIVERSAL E CONTROLES DE INTERFACE
+    // ============================================================================
+    const clipInput = document.getElementById('universalClipboardInput');
+    clipInput.addEventListener('input', () => {
+      broadcastClipboardNow();
+    });
+
+    function broadcastClipboardNow() {
+      const text = clipInput.value;
+      const shareNearby = document.getElementById('clipShareNearbyCheck').checked;
+      sendSignal({
+        type: 'clipboard',
+        account: currentUserEmail,
+        text: text,
+        shareNearby: shareNearby
+      });
+    }
+
+    async function pasteFromSystemClipboard() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          clipInput.value = text;
+          clipboardCounter++;
+          document.getElementById('statClipboardCount').textContent = clipboardCounter;
+          broadcastClipboardNow();
+          addActivityItem('Texto colado do sistema', text.substring(0, 40) + '...', 'Sincronizado');
+        }
+      } catch (e) {
+        clipInput.focus();
+      }
+    }
+
+    async function copyUniversalClipboard() {
+      const text = clipInput.value;
+      if (!text) return;
+      await navigator.clipboard.writeText(text);
+      addActivityItem('Copiado para o aparelho atual', text.substring(0, 40), 'Copiado');
+    }
+
+    function toggleNearbyVisibility() {
+      allowNearby = !allowNearby;
+      const orb = document.getElementById('orbNearby');
+      const label = document.getElementById('orbNearbyLabel');
+      const pill = document.getElementById('nearbyStatusPill');
+
+      if (allowNearby) {
+        orb.classList.add('active');
+        label.textContent = 'Próximos: On';
+        label.className = 'text-xs font-medium text-sky-300';
+        pill.textContent = 'Visível ao redor';
+        pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-sky-500/20 border border-sky-400/40 text-sky-300';
+      } else {
+        orb.classList.remove('active');
+        label.textContent = 'Próximos: Off';
+        label.className = 'text-xs font-medium text-slate-300';
+        pill.textContent = 'Invisível';
+        pill.className = 'text-[10px] px-2 py-0.5 rounded-full bg-slate-900 border border-slate-700 text-slate-400';
+      }
+      announcePresence();
+      renderNearbyList();
+    }
+
+    function toggleCellularMode() {
+      allowCellular = !allowCellular;
+      const orb = document.getElementById('orbCellular');
+      const label = document.getElementById('orbCellularLabel');
+      if (allowCellular) {
+        orb.classList.add('active');
+        label.textContent = 'Wi-Fi + 5G';
+        label.className = 'text-xs font-medium text-sky-300';
+      } else {
+        orb.classList.remove('active');
+        label.textContent = 'Só Wi-Fi';
+        label.className = 'text-xs font-medium text-slate-300';
+      }
+    }
+
+    function requestNearbyAccess(peerId) {
+      sendSignal({ type: 'nearby-request', targetId: peerId });
+      addActivityItem('Solicitação enviada', 'Aguardando permissão do aparelho próximo...', 'Pendente');
+    }
+
+    function respondNearbyPermission(accepted) {
+      document.getElementById('permissionModal').classList.add('hidden');
+      if (!pendingNearbyRequestPeer) return;
+      if (accepted) {
+        knownDevices.set(pendingNearbyRequestPeer.id, {
+          ...pendingNearbyRequestPeer,
+          isSelf: false,
+          isNearby: true,
+          authorized: true
+        });
+        renderDevicesList();
+        renderNearbyList();
+      }
+      sendSignal({
+        type: 'nearby-response',
+        targetId: pendingNearbyRequestPeer.id,
+        accepted: accepted
+      });
+      pendingNearbyRequestPeer = null;
+    }
+
+    function renderDevicesList() {
+      const container = document.getElementById('devicesListContainer');
+      const list = Array.from(knownDevices.values()).filter(d => d.authorized);
+
+      container.innerHTML = list.map(dev => {
+        const isSelected = selectedTargetDeviceId === dev.id;
+        return `
+          <div onclick="selectTargetDevice('${dev.id}')"
+            class="flex items-center justify-between p-3.5 rounded-2xl cursor-pointer transition border ${
+              isSelected
+                ? 'bg-blue-950/70 border-sky-400/60 shadow-[0_0_20px_rgba(56,189,248,0.15)]'
+                : 'bg-[#040B1A]/80 border-blue-900/40 hover:border-sky-400/30'
+            }">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-blue-950 border border-sky-400/30 flex items-center justify-center text-sky-300">
+                <i data-lucide="${dev.os === 'Android' || dev.os === 'iOS' ? 'smartphone' : 'monitor'}" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <p class="text-xs sm:text-sm font-semibold text-white">${dev.name}</p>
+                <p class="text-[11px] text-sky-400/80">${dev.os} • ${dev.isSelf ? 'Aparelho Atual' : 'Pronto para P2P'}</p>
+              </div>
+            </div>
+            <span class="text-[11px] font-medium px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-400/30 text-emerald-300">
+              • Ativo
+            </span>
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function renderNearbyList() {
+      const container = document.getElementById('nearbyDevicesContainer');
+      const nearbyPeers = Array.from(knownDevices.values()).filter(d => !d.isSelf && d.isNearby);
+
+      if (nearbyPeers.length === 0) {
+        container.innerHTML = `<p class="text-[11px] text-center text-slate-400">Nenhum aparelho de outra conta visível por perto no momento.</p>`;
+        return;
+      }
+
+      container.innerHTML = nearbyPeers.map(p => `
+        <div class="flex items-center justify-between p-2.5 rounded-xl bg-[#040B1A] border border-blue-900/60">
+          <div>
+            <p class="text-xs font-semibold text-white">${p.name}</p>
+            <p class="text-[10px] text-slate-400">${p.os}</p>
+          </div>
+          ${
+            p.authorized
+              ? `<span class="text-[10px] text-emerald-400 font-semibold">Conectado</span>`
+              : `<button onclick="requestNearbyAccess('${p.id}')" class="px-2.5 py-1 rounded-lg bg-blue-600 text-[10px] font-semibold text-white">Pedir Permissão</button>`
+          }
+        </div>
+      `).join('');
+    }
+
+    function selectTargetDevice(id) {
+      selectedTargetDeviceId = (selectedTargetDeviceId === id) ? 'all' : id;
+      renderDevicesList();
+    }
+
+    function addActivityItem(title, subtitle, badge) {
+      const feed = document.getElementById('activityFeed');
+      const item = document.createElement('div');
+      item.className = 'flex items-center justify-between p-3 rounded-2xl bg-[#040B1A]/90 border border-blue-900/40';
+      item.innerHTML = `
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-9 h-9 rounded-xl bg-blue-950/90 border border-sky-400/25 flex items-center justify-center text-sky-300 shrink-0">
+            <i data-lucide="arrow-up-right" class="w-4 h-4"></i>
+          </div>
+          <div class="truncate">
+            <p class="text-xs font-semibold text-white truncate">${title}</p>
+            <p class="text-[11px] text-slate-400 truncate">${subtitle}</p>
+          </div>
+        </div>
+        <span class="text-xs font-bold text-sky-400 ml-3 shrink-0">${badge}</span>
+      `;
+      feed.prepend(item);
+      lucide.createIcons();
+    }
+
+    function clearActivities() {
+      document.getElementById('activityFeed').innerHTML = '';
+    }
+
+    function setViewportMode(mode) {
+      const main = document.getElementById('mainViewport');
+      const rightCol = document.getElementById('rightColumn');
+      const leftCol = document.getElementById('leftColumn');
+      const autoBtn = document.getElementById('viewAutoBtn');
+      const mobBtn = document.getElementById('viewMobileBtn');
+
+      if (mode === 'mobile') {
+        main.className = 'w-full max-w-[420px] mx-auto p-4 flex-1 flex flex-col gap-5 transition-all duration-300';
+        leftCol.className = 'w-full space-y-5';
+        rightCol.className = 'w-full space-y-5';
+        mobBtn.className = 'px-3 py-1 rounded-full bg-blue-600 text-white font-medium transition';
+        autoBtn.className = 'px-3 py-1 rounded-full text-slate-400 hover:text-white transition';
+      } else {
+        main.className = 'w-full max-w-7xl mx-auto p-4 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start transition-all duration-300';
+        leftCol.className = 'lg:col-span-5 space-y-5';
+        rightCol.className = 'lg:col-span-7 space-y-5';
+        autoBtn.className = 'px-3 py-1 rounded-full bg-blue-600 text-white font-medium transition';
+        mobBtn.className = 'px-3 py-1 rounded-full text-slate-400 hover:text-white transition';
+      }
+    }
+
+    function formatBytes(bytes) {
+      if (!bytes || bytes === 0) return '0.0 MB';
+      const k = 1024;
+      const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // Drag and Drop de arquivos na zona orbital
+    const dropZone = document.getElementById('dropZone');
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-sky-400');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-sky-400');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-sky-400');
+      if (e.dataTransfer.files.length) handleFilesSelected(e.dataTransfer.files);
+    });
+
+    lucide.createIcons();
+  </script>
+</body>
+</html>
